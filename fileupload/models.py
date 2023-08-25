@@ -5,12 +5,11 @@ from django.utils.decorators import method_decorator
 
 # rawdata entity
 class RawData(models.Model):
-  host = models.TextField(max_length=10, null=False)
-  title = models.TextField(max_length=40, null=True)
-  imgfile = models.ImageField(null=True, upload_to="", blank=True)
-  content = models.TextField()
+  file_name = models.ImageField(null=True, upload_to="", blank=True)
+  describe = models.TextField(max_length=40, null=True)
+  created_at = models.DateTimeField(auto_now_add=True)
 
 # output entity
 class Output(models.Model):
+  created_at = models.DateTimeField(auto_now_add=True)
   
-
