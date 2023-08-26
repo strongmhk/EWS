@@ -5,11 +5,13 @@ from django.utils.decorators import method_decorator
 
 # rawdata entity
 class RawData(models.Model):
-  file_name = models.ImageField(null=True, upload_to="", blank=True)
+  file_name = models.FileField(null=True, upload_to="", blank=True)
   describe = models.TextField(max_length=40, null=True)
   created_at = models.DateTimeField(auto_now_add=True)
 
 # output entity
 class Output(models.Model):
+  raw_data_id = models.ForeignKey("RawData", related_name="analyze", on_delete=models.CASCADE, db_column="raw_data_id")
+  file_name = models.FileField(null=True, upload_to="", blank=True)
   created_at = models.DateTimeField(auto_now_add=True)
-  
+
