@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import FileUpload
+from .models import RawData
 from django.http import HttpResponse, Http404, HttpResponseRedirect
 from django.core.exceptions import BadRequest
 from django.core import serializers
@@ -22,19 +22,20 @@ def fileUpload(request):
   if(request.method == 'POST'):
     title = request.POST['title']
     content = request.POST['content']
-    img = request.FILES['imgfile']
-    fileupload = FileUpload(
+    file_name = request.FILES['file_name']
+    rawdata = RawData(
       title=title,
       content=content,
-      imgfile=img,
+      file_name=file_name,
     )
-    fileupload.save()
-    print(fileupload)
+    rawdata.save()
+    print(rawdata)
+
     return HttpResponse() # TODO 응답을 성공 페이지로 보내줘야함
   
   ## 전체 파일 정보 받기, GET /files/
   elif(request.method == 'GET'):
-    AllFiles = FileUpload.objects.all()
+    AllFiles = RawData.objects.all()
     data = serializers.serialize("json", AllFiles)
     return HttpResponse(
       data,
@@ -54,11 +55,11 @@ def fileDetail(request, file_id):
   2. GET: 파일의 5개의 데이터를 반환함
   '''
   if(request.method == 'DELETE') :
-    file = get_object_or_404(FileUpload, pk=file_id)
+    file = get_object_or_404(RawData, pk=file_id)
     # 경로에서 파일 삭제
     try :
       path = getMediaURI()
-      os.remove(os.path.join(path, file.imgfile.name))
+      os.remove(os.path.join(path, file.file_name.name))
     except:
       print('파일을 찾을 수 없습니다.')
   
@@ -108,6 +109,7 @@ def analyze(request, file_id) :
   URL: /files/{id}/analyze/
   1. POST: 분석을 진행할 column(feature)과 반응변수(target)을 입력받고 데이터 분석을 진행,
     분석된 대시보드의 URL을 json으로 반환
+  2. GET: 분석 결과 파일
   '''
   if(request.method == 'POST'):
     targets = request.POST['targets']
@@ -125,9 +127,10 @@ def analyze(request, file_id) :
     ## 데이터 분석 끝
     return HttpResponse()
   
+  elif(request.method == 'GET'):
+    print("hello")
   else:
     return BadRequest('Invalid request')
-  
 
 
 #### ####
@@ -147,8 +150,8 @@ def readCsvById_json(file_id) :
   '''
   csv파일을 읽고 5행의 데이터를 json으로 파싱해서 반환
   '''
-  file = get_object_or_404(FileUpload, pk=file_id)
-  path = os.path.join(getMediaURI(), file.imgfile.name)
+  file = get_object_or_404(RawData, pk=file_id)
+  path = os.path.join(getMediaURI(), file.file_name.name)
   df = pd.read_csv(path)
   return df.head().to_json()
 
@@ -157,11 +160,11 @@ def readMetaData(file_id) :
   csv파일의 column 종류와 분석 가능한 기법들을 반환
   {
     "column" : [컬럼 데이터 리스트],
-    "tect" : [분석 기법 이름 리스트]
+    "tech" : [분석 기법 이름 리스트]
   }
   '''
-  file = get_object_or_404(FileUpload, pk=file_id)
-  path = os.path.join(getMediaURI(), file.imgfile.name)
+  file = get_object_or_404(RawData, pk=file_id)
+  path = os.path.join(getMediaURI(), file.file_name.name)
   df = pd.read_csv(path)
   column = df.columns.tolist()
   tech =[item.value for item in list(AnalysisTech_forClient)]
@@ -174,8 +177,8 @@ def readMetaData(file_id) :
   return json.dumps(data)
 
 def readCsvById(file_id):
-  file = get_object_or_404(FileUpload, pk=file_id)
-  path = os.path.join(getMediaURI(), file.imgfile.name)
+  file = get_object_or_404(RawData, pk=file_id)
+  path = os.path.join(getMediaURI(), file.file_name.name)
   df = pd.read_csv(path)
   
   return df
