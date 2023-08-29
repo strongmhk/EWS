@@ -1,4 +1,5 @@
 from enum import Enum
+
 class AnalysisTech_forServer(Enum):
   LinearRegression = "lr"
   RidgeRegression = "ridge"
