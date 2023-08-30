@@ -76,12 +76,16 @@ fabric.properties
 # Android studio 3.1+ serialized cache file
 .idea/caches/build_file_checksums.ser
 
+# 가상환경 파일 무시
 venv/
-
 .env
 
+# sqlite 무시
 db.sqlite3
 
 .idea/
 
 __pycache__/
+
+# media 파일 무시
+media/
