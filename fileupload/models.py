@@ -13,7 +13,7 @@ class RawData(models.Model):
 
 # output entity
 class Output(models.Model):
-  raw_data_id = models.ForeignKey("RawData", related_name="analyze", on_delete=models.CASCADE, db_column="raw_data_id")
+  raw_data_id = models.ForeignKey("RawData", related_name="analysis", on_delete=models.CASCADE, db_column="raw_data_id")
   file_name = models.FileField(null=True, upload_to="", blank=True)
   created_at = models.DateTimeField(auto_now_add=True)
   analysis_tech = models.CharField(
