@@ -7,7 +7,7 @@ from django.utils.decorators import method_decorator
 
 # rawdata entity
 class RawData(models.Model):
-  file_name = models.FileField(null=True, upload_to="", blank=True)
+  file_name = models.FileField(null=True, upload_to="%Y/%m/%d", blank=True)
   describe = models.TextField(max_length=40, null=True)
   created_at = models.DateTimeField(auto_now_add=True)
 
