@@ -15,17 +15,15 @@ def fileUpload(request):
   '''
   ALLOW METHOD: POST, GET
   URL: /files/
-  1. POST: title, content, file을 입력받고 데이터베이스에 저장
+  1. POST: describe, file_name 을 입력받고 데이터베이스에 저장
   2. GET: 현재 DB에 저장된 파일들의 목록을 반환
   '''
   ## 파일 업로드
   if(request.method == 'POST'):
-    title = request.POST['title']
-    content = request.POST['content']
+    describe = request.POST['describe']
     file_name = request.FILES['file_name']
     rawdata = RawData(
-      title=title,
-      content=content,
+      describe=describe,
       file_name=file_name,
     )
     rawdata.save()
@@ -40,7 +38,7 @@ def fileUpload(request):
     return HttpResponse(
       data,
       headers={
-        "Content-Type": "applictaion/json"
+        "Content-Type": "application/json"
       }
       )
     
@@ -74,7 +72,7 @@ def fileDetail(request, file_id):
     return HttpResponse(
       jsonData,
       headers={
-        "Content-Type": "applictaion/json"
+        "Content-Type": "application/json"
       }
       )
 
@@ -94,7 +92,7 @@ def fileMetaData(request, file_id):
     return HttpResponse(
       jsonData,
       headers={
-        "Content-Type": "applictaion/json"
+        "Content-Type": "application/json"
       }
       )
   else:
