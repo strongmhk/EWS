@@ -1,6 +1,7 @@
+from django.db import IntegrityError
 from django.shortcuts import render
 from .models import RawData
-from django.http import HttpResponse, Http404, HttpResponseRedirect
+from django.http import HttpResponse, Http404, HttpResponseRedirect, JsonResponse
 from django.core.exceptions import BadRequest
 from django.core import serializers
 from django.shortcuts import render, get_object_or_404
@@ -19,18 +20,15 @@ def fileUpload(request):
   2. GET: 현재 DB에 저장된 파일들의 목록을 반환
   '''
   ## 파일 업로드
-  if(request.method == 'POST'):
+  if request.method == 'POST':
     describe = request.POST['describe']
     file_name = request.FILES['file_name']
-    rawdata = RawData(
-      describe=describe,
-      file_name=file_name,
-    )
-    rawdata.save()
-    print(rawdata)
 
-    return HttpResponse() # TODO 응답을 성공 페이지로 보내줘야함
-  
+    response_data = createCsvFile(file_name, describe)
+
+    return JsonResponse(response_data)   # TODO 응답을 성공 페이지로 보내줘야함
+
+
   ## 전체 파일 정보 받기, GET /files/
   elif(request.method == 'GET'):
     AllFiles = RawData.objects.all()
@@ -44,13 +42,17 @@ def fileUpload(request):
     
   else :
     raise BadRequest('Invalid request')
-  
+
+
+
+
+
 def fileDetail(request, file_id):
   '''
   ALLOW METHOD: GET, DELETE
   URL: /files/{id}/
   1. DELETE: 파일을 삭제함
-  2. GET: 파일의 5개의 데이터를 반환함
+  2. GET: 파일명과 함께 파일의 5개의 데이터를 반환함
   '''
   if(request.method == 'DELETE') :
     file = get_object_or_404(RawData, pk=file_id)
@@ -64,17 +66,17 @@ def fileDetail(request, file_id):
     # db에서 파일 삭제
     file.delete()
     
-    return HttpResponse("success")
+    return HttpResponse("파일 삭제 완료")
   
   elif(request.method == 'GET'):
-    jsonData = readCsvById_json(file_id)
-    
+    json_data = readCsvById_json(file_id)
+
     return HttpResponse(
-      jsonData,
+      json_data,
       headers={
         "Content-Type": "application/json"
       }
-      )
+    )
 
   
   else :
@@ -88,7 +90,7 @@ def fileMetaData(request, file_id):
   '''
   if(request.method == 'GET') :
     jsonData = readMetaData(file_id)
-    
+
     return HttpResponse(
       jsonData,
       headers={
@@ -112,7 +114,9 @@ def analyze(request, file_id) :
   if(request.method == 'POST'):
     targets = request.POST['targets']
     features = request.POST['features']
-    
+
+
+
     # response = foo(df, targets, features)
     
     print(features)
@@ -131,7 +135,32 @@ def analyze(request, file_id) :
     return BadRequest('Invalid request')
 
 
-#### ####
+
+
+def createCsvFile(file_name, describe):
+  try:
+    rawdata = RawData(
+      file_name=file_name,
+      describe=describe,
+    )
+    rawdata.save()
+
+    response_data = {
+      "message": "파일 업로드 완료",
+      "id": rawdata.id,
+      "file_name": rawdata.file_name.url,
+      "describe": rawdata.describe,
+    }
+
+  except IntegrityError:
+    response_data = {
+      "message": "이미 존재하는 파일 이름입니다."
+    }
+
+  return response_data
+
+
+
 def getMediaURI() :
   # 현재 스크립트 파일의 경로 (절대 경로)
   current_path = os.path.abspath(__file__)
@@ -151,6 +180,17 @@ def readCsvById_json(file_id) :
   file = get_object_or_404(RawData, pk=file_id)
   path = os.path.join(getMediaURI(), file.file_name.name)
   df = pd.read_csv(path)
+  file_name = os.path.basename(path)
+
+  data_as_dict = df.head().to_dict(orient="records")
+
+  response_data = {
+    "file_name": file_name,
+    "data": data_as_dict
+  }
+
+  json_data = json.dumps(response_data)
+
   return df.head().to_json()
 
 def readMetaData(file_id) :
@@ -180,3 +220,4 @@ def readCsvById(file_id):
   df = pd.read_csv(path)
   
   return df
+
