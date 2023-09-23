@@ -1,6 +1,6 @@
 from django.db import IntegrityError
 from django.shortcuts import render
-from .models import RawData
+from .models import RawData, Output
 from django.http import HttpResponse, Http404, HttpResponseRedirect, JsonResponse
 from django.core.exceptions import BadRequest
 from django.core import serializers
@@ -11,6 +11,9 @@ from .techList import *
 import json
 from time import sleep
 # Create your views here.
+
+
+## RawData 관련 api
 
 def fileUpload(request):
   '''
@@ -102,6 +105,76 @@ def fileMetaData(request, file_id):
   
 
 
+## 여기부터 Output 관련 api
+
+def outputCreate(request):
+    '''
+    ALLOW METHOD: POST, GET
+    URL: /files/outputs/
+    1. POST: raw_data_id, describe, file_name 을 입력받고 Output 데이터베이스에 저장
+    2. GET: 현재 DB에 저장된 파일들의 목록을 반환
+    '''
+    if (request.method == 'POST'):
+
+        raw_data_id = int(request.POST['raw_data_id'])
+        describe = request.POST['describe']
+        file_name = request.FILES['file_name']
+
+        response_data = createOutputFile(raw_data_id, describe, file_name)
+
+        return JsonResponse(response_data)
+
+
+    ## 전체 파일 정보 받기, GET /files/ouputs/
+    elif (request.method == 'GET'):
+
+      AllFiles = Output.objects.all()
+      data = serializers.serialize("json", AllFiles)
+
+      return HttpResponse(
+        data,
+        headers={
+          "Content-Type": "application/json"
+        }
+      )
+    else:
+      raise BadRequest('Invalid request')
+
+
+
+'''
+  ALLOW METHOD: GET, DELETE
+  URL: /files/outputs/{id}/
+  1. DELETE: 파일을 삭제함
+  2. GET: 해당 파일 응답 페이지로 반환
+  '''
+def outputGetOrDelete(request, output_id):
+  if (request.method == 'DELETE'):
+    output = get_object_or_404(Output, pk=output_id)
+    # 경로에서 파일 삭제
+    try:
+      path = getMediaURI()
+      os.remove(os.path.join(path, output.file_name.name))
+    except:
+      print('파일을 찾을 수 없습니다.')
+
+    # db에서 파일 삭제
+    output.delete()
+
+    return HttpResponse("파일 삭제 완료")
+
+  elif (request.method == 'GET'):
+    json_data = readCsvById_json(output_id)
+
+    return HttpResponse(
+      json_data,
+      headers={
+        "Content-Type": "application/json"
+      }
+    )
+
+
+
 ## TODO 데이터 분석을 하는 함수
 def analyze(request, file_id) :
   '''
@@ -137,6 +210,7 @@ def analyze(request, file_id) :
 
 
 
+# data파일 db에 insert
 def createCsvFile(file_name, describe):
   try:
     rawdata = RawData(
@@ -161,6 +235,35 @@ def createCsvFile(file_name, describe):
 
 
 
+
+
+def createOutputFile(raw_data_id, file_name, describe):
+  try:
+    raw_data = RawData.objects.get(id=raw_data_id)
+    output = Output(
+      raw_data_id=raw_data,
+      file_name=file_name,
+      describe=describe,
+    )
+    output.save()
+
+    response_data = {
+      "message": "결과 파일 생성 완료",
+      "id": output.id,
+      "file_name": output.file_name.url,
+      "describe": output.describe,
+    }
+
+  except IntegrityError:
+    response_data = {
+      "message": "이미 존재하는 파일 이름입니다."
+    }
+
+  return response_data
+
+
+
+
 def getMediaURI() :
   # 현재 스크립트 파일의 경로 (절대 경로)
   current_path = os.path.abspath(__file__)
@@ -171,6 +274,8 @@ def getMediaURI() :
   # 상위 경로의 다른 폴더 경로를 구하기 위해 os.path.join을 사용합니다.
   other_directory = os.path.join(parent_directory, 'media')
   return other_directory
+
+
 
 
 def readCsvById_json(file_id) :
@@ -192,6 +297,8 @@ def readCsvById_json(file_id) :
   json_data = json.dumps(response_data)
 
   return df.head().to_json()
+
+
 
 def readMetaData(file_id) :
   '''
