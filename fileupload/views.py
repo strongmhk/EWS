@@ -1,3 +1,4 @@
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError
 from django.shortcuts import render
 from .models import RawData, Output
@@ -117,10 +118,8 @@ def outputCreate(request):
     if (request.method == 'POST'):
 
         raw_data_id = int(request.POST['raw_data_id'])
-        describe = request.POST['describe']
-        file_name = request.FILES['file_name']
 
-        response_data = createOutputFile(raw_data_id, describe, file_name)
+        response_data = createOutputFile(raw_data_id)
 
         return JsonResponse(response_data)
 
@@ -146,8 +145,8 @@ def outputCreate(request):
   ALLOW METHOD: GET, DELETE
   URL: /files/outputs/{id}/
   1. DELETE: 파일을 삭제함
-  2. GET: 해당 파일 응답 페이지로 반환
-  '''
+  2. GET: 해당 html 파일 응답 페이지로 반환
+'''
 def outputGetOrDelete(request, output_id):
   if (request.method == 'DELETE'):
     output = get_object_or_404(Output, pk=output_id)
@@ -172,6 +171,9 @@ def outputGetOrDelete(request, output_id):
         "Content-Type": "application/json"
       }
     )
+
+
+
 
 
 
@@ -237,13 +239,18 @@ def createCsvFile(file_name, describe):
 
 
 
-def createOutputFile(raw_data_id, file_name, describe):
+def createOutputFile(raw_data_id):
   try:
     raw_data = RawData.objects.get(id=raw_data_id)
+
+    ## 여기서 데이터 분석
+
+    ## 데이터 분석 완료
+    path = 'a' # 파일 저장 경로
+
     output = Output(
       raw_data_id=raw_data,
-      file_name=file_name,
-      describe=describe,
+      path=path,
     )
     output.save()
 
