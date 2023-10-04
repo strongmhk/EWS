@@ -1,8 +1,12 @@
+from datetime import datetime
+from pathlib import Path
+
+from django.core.files.storage import default_storage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError
 from django.shortcuts import render
 from .models import RawData, Output
-from django.http import HttpResponse, Http404, HttpResponseRedirect, JsonResponse
+from django.http import HttpResponse, Http404, HttpResponseRedirect, JsonResponse, FileResponse
 from django.core.exceptions import BadRequest
 from django.core import serializers
 from django.shortcuts import render, get_object_or_404
@@ -14,7 +18,9 @@ from time import sleep
 # Create your views here.
 
 
-## RawData 관련 api
+'''
+RawData 관련 api
+'''
 
 def fileUpload(request):
   '''
@@ -24,13 +30,13 @@ def fileUpload(request):
   2. GET: 현재 DB에 저장된 파일들의 목록을 반환
   '''
   ## 파일 업로드
-  if request.method == 'POST':
+  if(request.method == 'POST'):
     describe = request.POST['describe']
     file_name = request.FILES['file_name']
 
-    response_data = createCsvFile(file_name, describe)
+    response_data = insertRawDataToDB(file_name, describe)
 
-    return JsonResponse(response_data)   # TODO 응답을 성공 페이지로 보내줘야함
+    return JsonResponse(response_data)
 
 
   ## 전체 파일 정보 받기, GET /files/
@@ -49,21 +55,18 @@ def fileUpload(request):
 
 
 
-
-
-def fileDetail(request, file_id):
+def fileDetail(request, raw_data_id):
   '''
   ALLOW METHOD: GET, DELETE
-  URL: /files/{id}/
+  URL: /files/{raw_data_id}/
   1. DELETE: 파일을 삭제함
-  2. GET: 파일명과 함께 파일의 5개의 데이터를 반환함
+  2. GET: 파일의 데이터 5행까지 반환
   '''
+  file = get_object_or_404(RawData, pk = raw_data_id)
   if(request.method == 'DELETE') :
-    file = get_object_or_404(RawData, pk=file_id)
     # 경로에서 파일 삭제
     try :
-      path = getMediaURI()
-      os.remove(os.path.join(path, file.file_name.name))
+      os.remove(getDataPath(raw_data_id))
     except:
       print('파일을 찾을 수 없습니다.')
   
@@ -73,7 +76,8 @@ def fileDetail(request, file_id):
     return HttpResponse("파일 삭제 완료")
   
   elif(request.method == 'GET'):
-    json_data = readCsvById_json(file_id)
+    json_data = readCsvById_json(raw_data_id)
+
 
     return HttpResponse(
       json_data,
@@ -85,15 +89,16 @@ def fileDetail(request, file_id):
   
   else :
     return BadRequest('Invalid request')
-  
-def fileMetaData(request, file_id):
+
+
+def fileMetaData(request, raw_data_id):
   '''
   ALLOW METHOD: GET
-  URL: /files/{id}/metadata/
+  URL: /files/{raw_data_id}/metadata/
   1. GET: file의 column 정보를 받고 반환
   '''
   if(request.method == 'GET') :
-    jsonData = readMetaData(file_id)
+    jsonData = readMetaData(raw_data_id)
 
     return HttpResponse(
       jsonData,
@@ -106,54 +111,99 @@ def fileMetaData(request, file_id):
   
 
 
-## 여기부터 Output 관련 api
-
-def outputCreate(request):
-    '''
-    ALLOW METHOD: POST, GET
-    URL: /files/outputs/
-    1. POST: raw_data_id, describe, file_name 을 입력받고 Output 데이터베이스에 저장
-    2. GET: 현재 DB에 저장된 파일들의 목록을 반환
-    '''
-    if (request.method == 'POST'):
-
-        raw_data_id = int(request.POST['raw_data_id'])
-
-        response_data = createOutputFile(raw_data_id)
-
-        return JsonResponse(response_data)
-
-
-    ## 전체 파일 정보 받기, GET /files/ouputs/
-    elif (request.method == 'GET'):
-
-      AllFiles = Output.objects.all()
-      data = serializers.serialize("json", AllFiles)
-
-      return HttpResponse(
-        data,
-        headers={
-          "Content-Type": "application/json"
-        }
-      )
-    else:
-      raise BadRequest('Invalid request')
-
 
 
 '''
+여기부터 Output 관련 api
+'''
+
+def createDqReport(request, raw_data_id):
+  '''
+  ALLOW METHOD: POST
+  URL: /files/dq-report/{raw_data_id}
+  1. POST: raw_data_id를 받아 해당 파일의 path를 찾고, html 파일 생성
+  '''
+
+  if (request.method == 'POST'):
+    # 파일 경로를 받아와 ews 인스턴스 초기화
+    raw_data_path = getDataPath(raw_data_id)
+    # ews = EWS(raw_data_path)
+    # ews.setup(feature_list, target_col, date_col,  object_col, object_list, missing_dic, using_col)
+
+
+    # 해당 파일 db에 저장
+    dir = "dq_report/min"
+    file_name = str(raw_data_id) + "dq_report.html"
+    # dir, file_name 넘겨주기
+    dq_report_path = createOutputPath(dir, file_name)
+    # 파일 해당 path안에 생성
+    createFileInDirectory(dq_report_path)
+    response_data = insertOutputToDB(raw_data_id, dq_report_path)
+
+    return JsonResponse(response_data)
+
+
+
+
+
+
+
+def outputCreate(request, raw_data_id):
+  '''
+  ALLOW METHOD: POST
+  URL: /files/analyze/{raw_data_id}
+  1. POST: raw_data_id를 전달받아 Output 데이터베이스에 저장
+  '''
+  if (request.method == 'POST'):
+    dir = 'analyze/min'
+    file_name = str(raw_data_id) + "analyze.html"
+    analyze_path = createOutputPath(dir, file_name) # output 파일 경로 생성
+    createFileInDirectory(analyze_path)
+    response_data = insertOutputToDB(raw_data_id, analyze_path)
+
+    return JsonResponse(response_data)
+
+
+
+
+def getAllOutput(request):
+  '''
+  ALLOW METHOD: GET
+  URL: /files/ouputs/
+  1. GET: 모든 output 파일 조회
+  '''
+  if (request.method == 'GET'):
+
+    AllFiles = Output.objects.all()
+    data = serializers.serialize("json", AllFiles)
+
+    return HttpResponse(
+      data,
+      headers={
+        "Content-Type": "application/json"
+      }
+    )
+
+  else:
+    raise BadRequest('Invalid request')
+
+
+
+
+def outputGetOrDelete(request, output_id):
+  '''
   ALLOW METHOD: GET, DELETE
-  URL: /files/outputs/{id}/
+  URL: /files/outputs/{output_id}/
   1. DELETE: 파일을 삭제함
   2. GET: 해당 html 파일 응답 페이지로 반환
-'''
-def outputGetOrDelete(request, output_id):
+  '''
+
   if (request.method == 'DELETE'):
     output = get_object_or_404(Output, pk=output_id)
     # 경로에서 파일 삭제
     try:
-      path = getMediaURI()
-      os.remove(os.path.join(path, output.file_name.name))
+      path = os.path.join(getMediaURI(), output.path)
+      os.remove(path)
     except:
       print('파일을 찾을 수 없습니다.')
 
@@ -163,57 +213,26 @@ def outputGetOrDelete(request, output_id):
     return HttpResponse("파일 삭제 완료")
 
   elif (request.method == 'GET'):
-    json_data = readCsvById_json(output_id)
+    output = get_object_or_404(Output, pk=output_id)
 
-    return HttpResponse(
-      json_data,
-      headers={
-        "Content-Type": "application/json"
-      }
-    )
+    if default_storage.exists(output.path):
+      return FileResponse(default_storage.open(output.path, 'rb'), content_type='text/html')
+    else:
+      raise Http404("존재하지 않는 파일입니다.")
 
 
 
 
-
-
-## TODO 데이터 분석을 하는 함수
-def analyze(request, file_id) :
-  '''
-  ALLOW METHOD: POST
-  URL: /files/{id}/analyze/
-  1. POST: 분석을 진행할 column(feature)과 반응변수(target)을 입력받고 데이터 분석을 진행,
-    분석된 대시보드의 URL을 json으로 반환
-  2. GET: 분석 결과 파일
-  '''
-  if(request.method == 'POST'):
-    targets = request.POST['targets']
-    features = request.POST['features']
-
-
-
-    # response = foo(df, targets, features)
-    
-    print(features)
-    print(targets)
-    
-    sleep(20)
-    
-    ## 데이터 분석 시작
-    
-    ## 데이터 분석 끝
-    return HttpResponse()
-  
-  elif(request.method == 'GET'):
-    print("hello")
-  else:
-    return BadRequest('Invalid request')
+'''
+여기까지 api
+'''
 
 
 
 
-# data파일 db에 insert
-def createCsvFile(file_name, describe):
+
+# RawData 테이블에 insert
+def insertRawDataToDB(file_name, describe):
   try:
     rawdata = RawData(
       file_name=file_name,
@@ -239,14 +258,11 @@ def createCsvFile(file_name, describe):
 
 
 
-def createOutputFile(raw_data_id):
+# output 테이블에 insert
+def insertOutputToDB(raw_data_id, path):
   try:
     raw_data = RawData.objects.get(id=raw_data_id)
-
-    ## 여기서 데이터 분석
-
-    ## 데이터 분석 완료
-    path = 'a' # 파일 저장 경로
+    # ews.setup(feature_list, target_col, date_col,  object_col, object_list, missing_dic, using_col)
 
     output = Output(
       raw_data_id=raw_data,
@@ -257,8 +273,6 @@ def createOutputFile(raw_data_id):
     response_data = {
       "message": "결과 파일 생성 완료",
       "id": output.id,
-      "file_name": output.file_name.url,
-      "describe": output.describe,
     }
 
   except IntegrityError:
@@ -289,21 +303,12 @@ def readCsvById_json(file_id) :
   '''
   csv파일을 읽고 5행의 데이터를 json으로 파싱해서 반환
   '''
-  file = get_object_or_404(RawData, pk=file_id)
-  path = os.path.join(getMediaURI(), file.file_name.name)
+  path = getDataPath(file_id)
   df = pd.read_csv(path)
-  file_name = os.path.basename(path)
-
-  data_as_dict = df.head().to_dict(orient="records")
-
-  response_data = {
-    "file_name": file_name,
-    "data": data_as_dict
-  }
-
-  json_data = json.dumps(response_data)
 
   return df.head().to_json()
+
+
 
 
 
@@ -315,8 +320,7 @@ def readMetaData(file_id) :
     "tech" : [분석 기법 이름 리스트]
   }
   '''
-  file = get_object_or_404(RawData, pk=file_id)
-  path = os.path.join(getMediaURI(), file.file_name.name)
+  path = getDataPath(file_id)
   df = pd.read_csv(path)
   column = df.columns.tolist()
   tech =[item.value for item in list(AnalysisTech_forClient)]
@@ -329,9 +333,71 @@ def readMetaData(file_id) :
   return json.dumps(data)
 
 def readCsvById(file_id):
-  file = get_object_or_404(RawData, pk=file_id)
-  path = os.path.join(getMediaURI(), file.file_name.name)
+  path = getDataPath(file_id)
   df = pd.read_csv(path)
   
   return df
 
+
+def getDataPath(file_id):
+  file = get_object_or_404(RawData, pk=file_id)
+  path = os.path.join(getMediaURI(), file.file_name.name)
+  return path
+
+
+def createOutputPath(dir, file_name):
+  '''
+  file의 path 생성
+  dir : 저장하고자하는 디렉토리 이름
+  file_name : 파일 이름
+  ex) media/dir/년/월/일/file_name
+
+  csv
+  dq_report
+  Preprocess_merged
+  파일마다 디렉토리를 분리해 관리하기 위해
+  '''
+
+  # 오늘 날짜
+  today = datetime.now()
+  # 년/월/일로 포맷팅
+  formatted_today = today.strftime("%Y/%m/%d")
+  path = os.path.join(getMediaURI(), dir, formatted_today, file_name)
+
+  # pathlib 모듈의 parent.mkdir 메서드 사용하기 위해서 인스턴스 생성
+  path = Path(path)
+
+  return path
+
+
+def createFileInDirectory(output_path):
+  # 경로가 존재하는지 확인하고, 없으면 생성합니다.
+  output_path.parent.mkdir(parents=True, exist_ok=True)
+  with open(output_path, 'w', encoding='utf-8') as f:
+    f.write("hello!")
+    f.close()
+
+
+
+
+
+def a(request):
+  '''
+  type: list, feature_list = []  # ex) ['계약건수[건]','시점'] 입력받은 df의 전체 col 리스트
+  type: str,  target_col = "지급여력비율" target column
+  type: str,  date_col = '시점'  date type을 가지고 있는 column
+  type: str,  object_col = '회사별'
+  type: list, object_list = []  # ex) ['메리츠','KB']
+  type: dic,  missing_dic = {}  # ex) {'시점' : 'drop', '지급여력비율' : 'mean'}
+  type: list,using_col = self.feature_list.copy() : feature_list 동일
+  type: list,using_col.append(self.target_col)
+  '''
+
+  feature_list = request.POST['feature_list']
+  target_col = request.POST['target_col']
+  date_col = request.POST['date_col']
+  object_col = request.POST['object_col']
+  object_list = request.POST['object_list']
+  using_col = request.POST['using_col']
+  missing_dic = request.POST['missing_dic']
+  raw_data_id = int(request.POST['raw_data_id'])
