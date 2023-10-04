@@ -233,6 +233,10 @@ def outputGetOrDelete(request, output_id):
 
 # RawData 테이블에 insert
 def insertRawDataToDB(file_name, describe):
+  '''
+  form-data로 넘어온
+  file_name, describe를 받아 Output 테이블에 해당 정보 insert
+  '''
   try:
     rawdata = RawData(
       file_name=file_name,
@@ -260,6 +264,9 @@ def insertRawDataToDB(file_name, describe):
 
 # output 테이블에 insert
 def insertOutputToDB(raw_data_id, path):
+  '''
+  raw_data_id와 path를 받아 Output 테이블에 insert
+  '''
   try:
     raw_data = RawData.objects.get(id=raw_data_id)
     # ews.setup(feature_list, target_col, date_col,  object_col, object_list, missing_dic, using_col)
@@ -333,14 +340,21 @@ def readMetaData(file_id) :
   return json.dumps(data)
 
 def readCsvById(file_id):
+  '''
+  file_id를 받아 해당 csv파일의 데이터 프레임 반환
+  '''
   path = getDataPath(file_id)
   df = pd.read_csv(path)
   
   return df
 
 
-def getDataPath(file_id):
-  file = get_object_or_404(RawData, pk=file_id)
+def getDataPath(raw_data_id):
+  '''
+  raw_data_id를 받아 RawData 테이블에서 해당 파일 조회,
+  해당 파일의 file_name 필드 + media 파일 경로를 붙여 절대 경로 반환
+  '''
+  file = get_object_or_404(RawData, pk=raw_data_id)
   path = os.path.join(getMediaURI(), file.file_name.name)
   return path
 
@@ -371,7 +385,10 @@ def createOutputPath(dir, file_name):
 
 
 def createFileInDirectory(output_path):
-  # 경로가 존재하는지 확인하고, 없으면 생성합니다.
+  '''
+  path를 전달받아 해당 path에 파일 생성
+  '''
+  # 경로가 존재하는지 확인하고, 없으면 생성
   output_path.parent.mkdir(parents=True, exist_ok=True)
   with open(output_path, 'w', encoding='utf-8') as f:
     f.write("hello!")
