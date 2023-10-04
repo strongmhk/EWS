@@ -5,6 +5,8 @@ from django.core.files.storage import default_storage
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError
 from django.shortcuts import render
+
+import model.ews
 from .models import RawData, Output
 from django.http import HttpResponse, Http404, HttpResponseRedirect, JsonResponse, FileResponse
 from django.core.exceptions import BadRequest
@@ -12,6 +14,7 @@ from django.core import serializers
 from django.shortcuts import render, get_object_or_404
 import os
 import pandas as pd
+
 from .techList import *
 import json
 from time import sleep
@@ -127,18 +130,17 @@ def createDqReport(request, raw_data_id):
   if (request.method == 'POST'):
     # 파일 경로를 받아와 ews 인스턴스 초기화
     raw_data_path = getDataPath(raw_data_id)
-    # ews = EWS(raw_data_path)
-    # ews.setup(feature_list, target_col, date_col,  object_col, object_list, missing_dic, using_col)
-
+    ews = model.ews.EWS(raw_data_path)
 
     # 해당 파일 db에 저장
-    dir = "dq_report/min"
-    file_name = str(raw_data_id) + "_dq_report.html"
-    # dir, file_name 넘겨주기
-    dq_report_path = createOutputPath(dir, file_name)
+    dir = "dq_report"
+    # dir 넘겨주기
+    dq_report_path = createOutputPath(dir)
+
+    ews.first_page(dq_report_path)
+
     # 파일 해당 path안에 생성
-    createFileInDirectory(dq_report_path)
-    response_data = insertOutputToDB(raw_data_id, dq_report_path)
+    response_data = insertDqReportToDB(raw_data_id, dq_report_path)
 
     return JsonResponse(response_data)
 
@@ -155,11 +157,11 @@ def outputCreate(request, raw_data_id):
   1. POST: raw_data_id를 전달받아 Output 데이터베이스에 저장
   '''
   if (request.method == 'POST'):
-    dir = 'analyze/min'
+    dir = 'analyze'
     file_name = str(raw_data_id) + "_analyze.html"
     analyze_path = createOutputPath(dir, file_name) # output 파일 경로 생성
     createFileInDirectory(analyze_path)
-    response_data = insertOutputToDB(raw_data_id, analyze_path)
+    response_data = insertAnalyzeToDB(raw_data_id, analyze_path)
 
     return JsonResponse(response_data)
 
@@ -263,17 +265,21 @@ def insertRawDataToDB(file_name, describe):
 
 
 # output 테이블에 insert
-def insertOutputToDB(raw_data_id, path):
+def insertDqReportToDB(raw_data_id, path):
   '''
   raw_data_id와 path를 받아 Output 테이블에 insert
   '''
   try:
     raw_data = RawData.objects.get(id=raw_data_id)
-    # ews.setup(feature_list, target_col, date_col,  object_col, object_list, missing_dic, using_col)
+    path = Path(path)
+
+    path_str = str(path)
+    file_name = "dq_report.html"
+    path_result = Path(path_str + file_name)
 
     output = Output(
       raw_data_id=raw_data,
-      path=path,
+      path=path_result,
     )
     output.save()
 
@@ -289,6 +295,36 @@ def insertOutputToDB(raw_data_id, path):
 
   return response_data
 
+
+def insertAnalyzeToDB(raw_data_id, path):
+  '''
+  raw_data_id와 path를 받아 Output 테이블에 insert
+  '''
+  try:
+    raw_data = RawData.objects.get(id=raw_data_id)
+    path = Path(path)
+
+    path_str = str(path)
+    file_name = "dq_report.html"
+    path_result = Path(path_str + file_name)
+
+    output = Output(
+      raw_data_id=raw_data,
+      path=path_result,
+    )
+    output.save()
+
+    response_data = {
+      "message": "결과 파일 생성 완료",
+      "id": output.id,
+    }
+
+  except IntegrityError:
+    response_data = {
+      "message": "이미 존재하는 파일 이름입니다."
+    }
+
+  return response_data
 
 
 
@@ -359,12 +395,12 @@ def getDataPath(raw_data_id):
   return path
 
 
-def createOutputPath(dir, file_name):
+def createOutputPath(dir):
   '''
   file의 path 생성
   dir : 저장하고자하는 디렉토리 이름
   file_name : 파일 이름
-  ex) media/dir/년/월/일/file_name
+  ex) media/dir/년/월/일/
 
   csv
   dq_report
@@ -376,7 +412,7 @@ def createOutputPath(dir, file_name):
   today = datetime.now()
   # 년/월/일로 포맷팅
   formatted_today = today.strftime("%Y/%m/%d")
-  path = os.path.join(getMediaURI(), dir, formatted_today, file_name)
+  path = os.path.join(getMediaURI(), dir, formatted_today)
 
   # pathlib 모듈의 parent.mkdir 메서드 사용하기 위해서 인스턴스 생성
   path = Path(path)
