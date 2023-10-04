@@ -391,8 +391,18 @@ def createFileInDirectory(output_path):
   # 경로가 존재하는지 확인하고, 없으면 생성
   output_path.parent.mkdir(parents=True, exist_ok=True)
   with open(output_path, 'w', encoding='utf-8') as f:
-    f.write("hello!")
-    f.close()
+    # HTML 내용 작성
+    f.write("<!DOCTYPE html>")
+    f.write("<html>")
+    f.write("<head>")
+    f.write("<title>Title of the document</title>")
+    f.write("</head>")
+    f.write("<body>")
+    f.write("Hello, World!")
+    f.write("</body>")
+    f.write("</html>")
+
+  f.close()
 
 
 
