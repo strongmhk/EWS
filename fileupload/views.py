@@ -62,13 +62,13 @@ def fileDetail(request, raw_data_id):
   1. DELETE: 파일을 삭제함
   2. GET: 파일의 데이터 5행까지 반환
   '''
-  file = get_object_or_404(RawData, pk = raw_data_id)
+  file = get_object_or_404(RawData, pk=raw_data_id)
   if(request.method == 'DELETE') :
     # 경로에서 파일 삭제
     try :
       os.remove(getDataPath(raw_data_id))
     except:
-      print('파일을 찾을 수 없습니다.')
+      HttpResponse("파일을 찾을 수 없습니다.")
   
     # db에서 파일 삭제
     file.delete()
