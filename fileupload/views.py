@@ -133,7 +133,7 @@ def createDqReport(request, raw_data_id):
 
     # 해당 파일 db에 저장
     dir = "dq_report/min"
-    file_name = str(raw_data_id) + "dq_report.html"
+    file_name = str(raw_data_id) + "_dq_report.html"
     # dir, file_name 넘겨주기
     dq_report_path = createOutputPath(dir, file_name)
     # 파일 해당 path안에 생성
