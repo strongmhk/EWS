@@ -156,7 +156,7 @@ def outputCreate(request, raw_data_id):
   '''
   if (request.method == 'POST'):
     dir = 'analyze/min'
-    file_name = str(raw_data_id) + "analyze.html"
+    file_name = str(raw_data_id) + "_analyze.html"
     analyze_path = createOutputPath(dir, file_name) # output 파일 경로 생성
     createFileInDirectory(analyze_path)
     response_data = insertOutputToDB(raw_data_id, analyze_path)
