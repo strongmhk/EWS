@@ -160,7 +160,7 @@ def analyzeCreate(request, raw_data_id):
     dir = 'analyze'
     file_name = str(raw_data_id) + "_analyze.html"
     analyze_path = createOutputPath(dir, file_name) # output 파일 경로 생성
-    createFileInDirectory(analyze_path)
+    # createFileInDirectory(analyze_path)
     response_data = insertAnalyzeToDB(raw_data_id, analyze_path)
 
     return JsonResponse(response_data)
@@ -391,7 +391,7 @@ def createOutputPath(dir, file_name):
   '''
   file의 path 생성
   dir : 저장하고자하는 디렉토리 이름
-  file_name : 파일이름 (dq_report.html)
+  file_name : 파일이름 (ex : dq_report.html)
   ex) media/dir/년/월/일/
 
   csv
