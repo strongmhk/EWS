@@ -135,7 +135,7 @@ def createDqReport(request, raw_data_id):
     # 해당 파일 db에 저장
     dir = "dq_report"
     # dir 넘겨주기
-    dq_report_path = createOutputPath(dir)
+    dq_report_path = createOutputPath(dir, "dq_report.html")
 
     ews.first_page(dq_report_path)
 
@@ -150,7 +150,7 @@ def createDqReport(request, raw_data_id):
 
 
 
-def outputCreate(request, raw_data_id):
+def analyzeCreate(request, raw_data_id):
   '''
   ALLOW METHOD: POST
   URL: /files/analyze/{raw_data_id}
@@ -271,15 +271,10 @@ def insertDqReportToDB(raw_data_id, path):
   '''
   try:
     raw_data = RawData.objects.get(id=raw_data_id)
-    path = Path(path)
-
-    path_str = str(path)
-    file_name = "dq_report.html"
-    path_result = Path(path_str + file_name)
 
     output = Output(
       raw_data_id=raw_data,
-      path=path_result,
+      path=path,
     )
     output.save()
 
@@ -296,21 +291,18 @@ def insertDqReportToDB(raw_data_id, path):
   return response_data
 
 
+
+
 def insertAnalyzeToDB(raw_data_id, path):
   '''
   raw_data_id와 path를 받아 Output 테이블에 insert
   '''
   try:
     raw_data = RawData.objects.get(id=raw_data_id)
-    path = Path(path)
-
-    path_str = str(path)
-    file_name = "dq_report.html"
-    path_result = Path(path_str + file_name)
 
     output = Output(
       raw_data_id=raw_data,
-      path=path_result,
+      path=path,
     )
     output.save()
 
@@ -395,11 +387,11 @@ def getDataPath(raw_data_id):
   return path
 
 
-def createOutputPath(dir):
+def createOutputPath(dir, file_name):
   '''
   file의 path 생성
   dir : 저장하고자하는 디렉토리 이름
-  file_name : 파일 이름
+  file_name : 파일이름 (dq_report.html)
   ex) media/dir/년/월/일/
 
   csv
@@ -415,9 +407,13 @@ def createOutputPath(dir):
   path = os.path.join(getMediaURI(), dir, formatted_today)
 
   # pathlib 모듈의 parent.mkdir 메서드 사용하기 위해서 인스턴스 생성
-  path = Path(path)
+  path_instance = Path(path)
+  path_str = str(path_instance)
+  path_result = Path(path_str + file_name)
 
-  return path
+  return path_result
+
+
 
 
 def createFileInDirectory(output_path):
