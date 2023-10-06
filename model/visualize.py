@@ -1,3 +1,6 @@
+from datetime import datetime
+
+from fileupload.views import getMediaURI, createOutputPath
 from syndata import *
 from preprocess import *
 from models import *
@@ -6,6 +9,8 @@ import os
 from autoviz import AutoViz_Class
 from pandas_dq import dq_report
 from pathlib import Path
+import sys
+sys.append()
 
 def prep_visualize(df, df_type=''):
     '''
@@ -13,6 +18,13 @@ def prep_visualize(df, df_type=''):
     df_type : str ("origin" or "synthetic")
     '''
     AV = AutoViz_Class()
+
+    dir = "autoviz"
+    save_dir = # 오늘 날짜
+    today = datetime.now()
+    # 년/월/일로 포맷팅
+    formatted_today = today.strftime("%Y/%m/%d")
+    path = os.path.join(getMediaURI(), "", formatted_today)
 
     html_maker = AV.AutoViz(
         filename="",
@@ -25,7 +37,7 @@ def prep_visualize(df, df_type=''):
         chart_format="html",
         max_rows_analyzed=150000,
         max_cols_analyzed=30,
-        save_plot_dir='./bank_sol/HTML/prep/'
+        save_plot_dir=save_dir
     )
     ## html 병합과정
     folder_path = './bank_sol/HTML/prep/AutoViz/'  # 가져올 폴더의 경로를 지정해주세요
@@ -37,11 +49,12 @@ def prep_visualize(df, df_type=''):
         with open(file_name, 'r', encoding='utf-8') as f:
             merged_content += f.read()
 
+    save_path = save_dir + f'/{df_type}_merged.html'
     # 결과를 새로운 파일에 저장
-    with open('./bank_sol/HTML/prep/' + f'/{df_type}_merged.html', 'w', encoding='utf-8') as f:
+    with open(save_path, 'w', encoding='utf-8') as f:
         f.write(merged_content)
 
-    return None
+    return save_path
 
 def html_dqreport(data, dq_report_path):
     '''

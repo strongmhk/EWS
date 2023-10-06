@@ -244,14 +244,17 @@ def auto_ml_cls_first(df, target):
     fold_value = math.floor((df[target].value_counts().min())/2)
 
     # best = cls.compare_models(fold = fold_value)
-    
+    # 여러 개 파일의 경로를 db에 저장하기 위해 경로 배열에 넣어 반환
+    save_path = []
+
     xgb_cls = cls.create_model('xgboost',cross_validation=True, fold = fold_value)
-    cls_dashboard_html(model,xgb_cls,"XGB")
+    xgb_path = cls_dashboard_html(model, xgb_cls, "XGB")
+    save_path.append(xgb_path)
     # lightgbm_cls = cls.create_model('lightgbm',cross_validation=True, fold = fold_value)
     # cls_dashboard_html(model,lightgbm_cls,"Lightgbm")
     lr_cls = cls.create_model('lr',cross_validation=True, fold = fold_value)
-    cls_dashboard_html(model,lr_cls,"lr")
-    
+    lr_path = cls_dashboard_html(model,lr_cls,"lr")
+    save_path.append(lr_path)
 
     xgb_port = 9010
     lightgbm_port =9020
@@ -284,7 +287,7 @@ def auto_ml_cls_first(df, target):
     #     }
     # ]
     # return address_classification
-    return None
+    return save_path
 
 def quantreg(df):
     '''

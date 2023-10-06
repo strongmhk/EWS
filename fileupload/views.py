@@ -133,11 +133,11 @@ def createDqReport(request, raw_data_id):
     ews = model.ews.EWS(raw_data_path)
 
     # 해당 파일 db에 저장
-    dir = "dq_report"
-    # dir 넘겨주기
-    dq_report_path = createOutputPath(dir, "dq_report.html")
 
-    ews.first_page(dq_report_path)
+    # dir 넘겨주기
+    dir = createOutputPath("dq_report")
+    ews.first_page(dir)
+    dq_report_path = appendPath(dir, "/dq_report.html")
 
     # 파일 해당 path안에 생성
     response_data = insertDqReportToDB(raw_data_id, dq_report_path)
@@ -157,11 +157,19 @@ def analyzeCreate(request, raw_data_id):
   1. POST: raw_data_id를 전달받아 Output 데이터베이스에 저장
   '''
   if (request.method == 'POST'):
-    dir = 'analyze'
-    file_name = str(raw_data_id) + "_analyze.html"
-    analyze_path = createOutputPath(dir, file_name) # output 파일 경로 생성
-    # createFileInDirectory(analyze_path)
-    response_data = insertAnalyzeToDB(raw_data_id, analyze_path)
+
+    feature_list = request.POST['feature_list']
+    target_col = request.POST['target_col']
+    date_col = request.POST['date_col']
+    object_col = request.POST['object_col']
+    missing_dic = request.POST['missing_dic']
+
+    raw_data_path = getDataPath(raw_data_id)
+    ews = model.ews.EWS(raw_data_path)
+    ews.setup(feature_list, target_col, date_col, object_col, missing_dic)
+    save_path = ews.trans_df()
+
+    response_data = insertAnalyzeToDB(raw_data_id, save_path)
 
     return JsonResponse(response_data)
 
@@ -297,6 +305,8 @@ def insertAnalyzeToDB(raw_data_id, path):
   '''
   raw_data_id와 path를 받아 Output 테이블에 insert
   '''
+
+
   try:
     raw_data = RawData.objects.get(id=raw_data_id)
 
@@ -387,11 +397,10 @@ def getDataPath(raw_data_id):
   return path
 
 
-def createOutputPath(dir, file_name):
+def createOutputPath(dir):
   '''
   file의 path 생성
   dir : 저장하고자하는 디렉토리 이름
-  file_name : 파일이름 (ex : dq_report.html)
   ex) media/dir/년/월/일/
 
   csv
@@ -406,12 +415,7 @@ def createOutputPath(dir, file_name):
   formatted_today = today.strftime("%Y/%m/%d")
   path = os.path.join(getMediaURI(), dir, formatted_today)
 
-  # pathlib 모듈의 parent.mkdir 메서드 사용하기 위해서 인스턴스 생성
-  path_instance = Path(path)
-  path_str = str(path_instance)
-  path_result = Path(path_str + file_name)
-
-  return path_result
+  return path
 
 
 
@@ -438,7 +442,13 @@ def createFileInDirectory(output_path):
 
 
 
+def appendPath(path, file_name):
+  # pathlib 모듈의 parent.mkdir 메서드 사용하기 위해서 인스턴스 생성
+  path_instance = Path(path)
+  path_str = str(path_instance)
+  path_result = Path(path_str + file_name)
 
+  return path_result
 
 def a(request):
   '''

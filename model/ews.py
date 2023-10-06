@@ -103,10 +103,10 @@ class EWS:
         df = df[self.using_col]
         # 현재는 Missing data는 무조건 drop
         df = missing_df(df)
-        prep_visualize(df, 'preprocess')  # preprocess_merged.html으로 저장됨
+        save_path = prep_visualize(df, 'preprocess')  # preprocess_merged.html으로 저장됨
         self.trans_df = df
 
-        return None
+        return save_path
 
     def prepare_df(self):
         '''
