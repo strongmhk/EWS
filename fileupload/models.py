@@ -13,7 +13,7 @@ class RawData(models.Model):
 # output entity
 class Output(models.Model):
   raw_data_id = models.ForeignKey("RawData", related_name="analysis", on_delete=models.SET_NULL, db_column="raw_data_id", null=True)
-  path = models.TextField(max_length=40, null=True)
+  path = models.FileField(null=True, upload_to="analyze/%Y/%m/%d", unique = True)
 
 
 

@@ -10,4 +10,5 @@ urlpatterns = [
   path('outputs/<int:output_id>/', views.outputGetOrDelete, name="outputGetOrDelete"),
   path('outputs/', views.getAllOutput, name="getAllOutput"),
   path('dq-report/<int:raw_data_id>/', views.createDqReport, name="createDqReport"),
+  path('test-analyze/<int:raw_data_id>/', views.tempOutputCreate, name="tempOutputCreate"),
 ]

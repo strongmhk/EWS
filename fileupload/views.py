@@ -164,6 +164,20 @@ def outputCreate(request, raw_data_id):
     return JsonResponse(response_data)
 
 
+def tempOutputCreate(request, raw_data_id):
+  '''
+  파일 저장하려고.. 임시 api
+  ALLOW METHOD: POST
+  URL: /files/test-analyze/{raw_data_id}
+  1. POST: raw_data_id를 전달받아 Output 데이터베이스에 저장
+  '''
+
+  if (request.method == 'POST'):
+    path = request.FILES['path']
+    response_data = insertTempOutputToDB(path, raw_data_id)
+
+    return JsonResponse(response_data)
+
 
 
 def getAllOutput(request):
@@ -202,7 +216,7 @@ def outputGetOrDelete(request, output_id):
     output = get_object_or_404(Output, pk=output_id)
     # 경로에서 파일 삭제
     try:
-      path = os.path.join(getMediaURI(), output.path)
+      path = os.path.join(getMediaURI(), str(output.path))
       os.remove(path)
     except:
       print('파일을 찾을 수 없습니다.')
@@ -215,8 +229,10 @@ def outputGetOrDelete(request, output_id):
   elif (request.method == 'GET'):
     output = get_object_or_404(Output, pk=output_id)
 
-    if default_storage.exists(output.path):
-      return FileResponse(default_storage.open(output.path, 'rb'), content_type='text/html')
+    path = getOutputPath(output_id)
+
+    if default_storage.exists(path):
+      return FileResponse(default_storage.open(path, 'rb'), content_type='text/html')
     else:
       raise Http404("존재하지 않는 파일입니다.")
 
@@ -359,6 +375,18 @@ def getDataPath(raw_data_id):
   return path
 
 
+def getOutputPath(output_id):
+  '''
+  output_id 받아 Output 테이블에서 해당 파일 조회,
+  해당 파일의 path 필드 + media 파일 경로를 붙여 절대 경로 반환
+  '''
+  output = get_object_or_404(Output, pk=output_id)
+  path = os.path.join(getMediaURI(), str(output.path))
+
+  return path
+
+
+
 def createOutputPath(dir, file_name):
   '''
   file의 path 생성
@@ -406,6 +434,22 @@ def createFileInDirectory(output_path):
 
 
 
+def insertTempOutputToDB(path, raw_data_id):
+  raw_data = RawData.objects.get(id=raw_data_id)
+  output = Output(
+    raw_data_id=raw_data,
+    path=path,
+  )
+
+  output.save()
+
+  response_data = {
+    "message": "결과 파일 생성 완료",
+    "id": output.id,
+    "path": output.path.url,
+  }
+
+  return response_data
 
 
 def a(request):
