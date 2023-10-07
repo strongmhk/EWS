@@ -132,7 +132,7 @@ def createDqReport(request, raw_data_id):
 
 
     # 해당 파일 db에 저장
-    dir = "dq_report/min"
+    dir = "dq_report"
     file_name = str(raw_data_id) + "_dq_report.html"
     # dir, file_name 넘겨주기
     dq_report_path = createOutputPath(dir, file_name)
@@ -155,7 +155,7 @@ def outputCreate(request, raw_data_id):
   1. POST: raw_data_id를 전달받아 Output 데이터베이스에 저장
   '''
   if (request.method == 'POST'):
-    dir = 'analyze/min'
+    dir = 'analyze'
     file_name = str(raw_data_id) + "_analyze.html"
     analyze_path = createOutputPath(dir, file_name) # output 파일 경로 생성
     createFileInDirectory(analyze_path)
